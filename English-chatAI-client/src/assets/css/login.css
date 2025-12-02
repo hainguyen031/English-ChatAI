@@ -1,0 +1,99 @@
+* {
+    box-sizing: border-box;
+}
+
+.login-page {
+    min-height: 100vh;
+    width: 100%;
+    background: #0d0d0f;
+    /* giong chat page */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: system-ui, sans-serif;
+}
+
+/* FORM */
+.login-box {
+    width: 100%;
+    max-width: 370px;
+    background: #1c1c1e;
+    /* giong sidebar / chat container */
+    padding: 28px;
+    border-radius: 14px;
+    border: 1px solid #2f2f32;
+    /* giong border chat */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    text-align: center;
+}
+
+/* TITLE */
+.login-title {
+    color: #e5e5e7;
+    font-size: 20px;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+/* INPUT GIONG INPUT TRONG CHAT */
+.login-input {
+    width: 100%;
+    padding: 12px 14px;
+    background: #0f0f10;
+    /* nen chat input */
+    border: 1px solid #2e2e33;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 14px;
+    color: #e9e9ea;
+    outline: none;
+}
+
+.login-input:focus {
+    border-color: #3b82f6;
+    /* xanh highlight giong chat */
+}
+
+/* BUTTON LOGIN */
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background: #00a67e;
+    /* xanh mint giống ChatGPT */
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.login-btn:hover {
+    background: #029b73;
+}
+
+/* LINK LOGIN / REGISTER */
+.login-box a {
+    color: #20cfa0;
+    /* xanh mint nhe */
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.login-box a:hover {
+    text-decoration: underline;
+}
+
+/* MOBILE */
+@media (max-width: 480px) {
+    .login-box {
+        padding: 22px;
+    }
+}
+
+.logo-img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+}

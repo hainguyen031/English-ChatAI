@@ -1,0 +1,216 @@
+/* ============================
+   SIDEBAR BASE
+============================ */
+.sidebar {
+    width: 230px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    height: 100vh;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    color: var(--text);
+    position: fixed;
+    left: 0;
+    top: 0;
+    transition: width 0.25s ease, background 0.25s ease;
+    overflow: hidden;
+    z-index: 20;
+}
+
+/* Collapse state */
+.sidebar.collapsed {
+    width: 60px !important;
+}
+
+/* Auto expand on hover */
+.sidebar.collapsed:hover {
+    width: 230px;
+}
+
+/* Hide text when collapsed */
+.sidebar.collapsed .sidebar-title,
+.sidebar.collapsed .history-label,
+.sidebar.collapsed .sidebar-item span,
+.sidebar.collapsed .history-item span,
+.sidebar.collapsed .bottom-section span {
+    opacity: 0;
+    visibility: hidden;
+    width: 0;
+    transition: opacity 0.2s, visibility 0.2s, width 0.2s;
+}
+
+/* Show text when hover expanded */
+.sidebar.collapsed:hover .sidebar-title,
+.sidebar.collapsed:hover .history-label,
+.sidebar.collapsed:hover .sidebar-item span,
+.sidebar.collapsed:hover .history-item span,
+.sidebar.collapsed:hover .bottom-section span {
+    opacity: 1;
+    visibility: visible;
+    width: auto;
+}
+
+/* ============================
+   TOP SECTION
+============================ */
+.top-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Collapse button */
+.collapse-btn {
+    width: 100%;
+    background: var(--button-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: background 0.2s;
+}
+
+.collapse-btn:hover {
+    background: var(--button-hover);
+}
+
+/* Sidebar title */
+.sidebar-title {
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+/* ============================
+   SIDEBAR ITEMS
+============================ */
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--button-bg);
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.2s, padding 0.2s;
+}
+
+.sidebar-item:hover {
+    background: var(--button-hover);
+}
+
+.sidebar-item.small {
+    opacity: 0.85;
+}
+
+/* Tighter padding when collapsed */
+.sidebar.collapsed .sidebar-item {
+    padding: 10px 12px;
+}
+
+/* ============================
+   HISTORY LIST
+============================ */
+.history-label {
+    margin-top: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    opacity: 0.7;
+    transition: 0.2s;
+}
+
+/* Scroll */
+.history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.history-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 6px;
+}
+
+.history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* History item */
+.history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--button-bg);
+    border: 1px solid var(--border);
+    padding: 8px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.2s, border 0.2s;
+}
+
+/* Active chat highlight */
+.history-item.active {
+    background: var(--button-hover);
+    border-color: #3b82f6;
+}
+
+.history-item:hover {
+    background: var(--button-hover);
+}
+
+/* Ten conversation */
+.title-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================
+   DELETE BUTTON
+============================ */
+.delete-btn {
+    margin-left: auto;
+    opacity: 0.6;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.delete-btn:hover {
+    opacity: 1;
+    color: #ef4444;
+}
+
+/* ============================
+   RENAME INPUT
+============================ */
+.rename-input {
+    flex: 1;
+    margin-left: 6px;
+    padding: 5px 8px;
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+/* ============================
+   BOTTOM SECTION
+============================ */
+.bottom-section {
+    margin-top: auto;
+}
