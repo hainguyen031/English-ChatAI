@@ -30,9 +30,11 @@ controller.register = async (req, res) => {
     }
 
     const hashed = await hashPassword(password);
-    const id = await User.create(username, hashed);
+    console.log(`hashed`, hashed);
+    
+    const idRes = await User.create(username, hashed);
 
-    const userResponse = { id, username }
+    const userResponse = { idRes, username };
 
 
     return res

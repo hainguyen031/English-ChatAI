@@ -1,12 +1,14 @@
 const pool = require('../config/db');
 const User = {};
+const { v4: uuidv4 } = require("uuid");
 
 User.create = async (username, password) => {
+    const id = uuidv4();
     const [result] = await pool.query(
-        `INSERT INTO users (username, password, created_at) VALUES (?, ?, NOW())`,
-        [username, password]
+        `INSERT INTO users (id, username, password, created_at) VALUES (?, ?, ?, NOW())`,
+        [id, username, password]
     );
-    return result.insertId;
+    return result;
 }
 
 User.findByUsername = async (username) => {
