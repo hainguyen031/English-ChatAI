@@ -1,49 +1,63 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "../assets/css/login.css";
 import { Link } from "react-router-dom";
 import Logo from "../assets/img/Logo-chinh.png";
+import { http } from "../lib/http";
+
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [pass, setPass] = useState("");
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const login = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
+    if (!username || !pass) {
+      setError("Nhập đầy đủ thông tin");
+      setLoading(false);
+      return;
+    }
 
-    // Fake auth (ban co the goi API that)
-    if (email === "admin@gmail.com" && pass === "123456") {
-      localStorage.setItem("token", "mysecrettoken");
-      navigate("/", { replace: true });
-    } else {
-      alert("Sai thong tin dang nhap");
+    try {
+      const res = await http.post("/user/login", {
+        username: username,
+        password: pass,
+      });
+      console.log(res);
+      const token = res.data.data.token;
+
+      localStorage.setItem("token", token);
+
+      // navigate("/", { replace: true });
+      window.location.href = "/";
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || err?.message || "Đăng nhập thất bại!"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-page">
-
       <div className="login-box">
-
         {/* Logo */}
         <div className="login-logo">
-          <img
-                src={Logo}
-                alt="App Logo"
-                className="logo-img"
-            />
+          <img src={Logo} alt="App Logo" className="logo-img" />
         </div>
 
         <h2 className="login-title">Login to continue</h2>
 
         <form onSubmit={login} className="login-form">
-
           <input
-            type="email"
-            placeholder="Email address"
+            type="text"
+            placeholder="Username"
             className="login-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
 
           <input
@@ -60,14 +74,14 @@ export default function Login() {
           <div style={{ color: "#aaa", marginTop: 12 }}>
             New here?{" "}
             <Link to="/register" style={{ color: "#00A67E" }}>
-                Create an account
+              Create an account
             </Link>
-            </div>
-
+          </div>
         </form>
-
+        {!loading && error && (
+          <div style={{ color: "red", marginTop: 12 }}>{error}</div>
+        )}
       </div>
-
     </div>
   );
 }

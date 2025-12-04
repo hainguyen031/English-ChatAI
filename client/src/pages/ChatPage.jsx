@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import ChatUI from "../components/ChatUI";
+import { http } from "../lib/http";
 
 export default function ChatPage() {
   const [history, setHistory] = useState([]);
@@ -9,12 +10,38 @@ export default function ChatPage() {
   const [collapsed, setCollapsed] = useState(false);
   const [activeChat, setActiveChat] = useState(null);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    console.log(activeChat);
+    if (activeChat) {
+      loadChat(activeChat);
+    }
+  }, [activeChat]);
+
+  async function loadHistory() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await http.get(`/history`);
+      const data = res.data.data;
+      setHistory(data);
+      setLoading(false);
+      setError(null);
+    } catch (err) {
+      setLoading(false);
+      setError(
+        err?.response?.data?.message || err?.message || "Unable to load history"
+      );
+    }
+  }
+
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) setTheme(savedTheme);
 
-    const savedHistory = localStorage.getItem("history");
-    if (savedHistory) setHistory(JSON.parse(savedHistory));
+    loadHistory();
 
     const savedCollapsed = localStorage.getItem("collapsed");
     if (savedCollapsed === "true") setCollapsed(true);
@@ -51,65 +78,112 @@ export default function ChatPage() {
     });
   };
 
-const createNewChat = () => {
-  const greeting = {
-    role: "assistant",
-    text: "Hello! How can I help you practice English today?"
+  const createNewChat = async () => {
+    // const greeting = {
+    //   role: "assistant",
+    //   text: "Hello! How can I help you practice English today?",
+    // };
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await http.post(`/history`);
+      const id = res.data.data.id;
+      loadHistory();
+      loadChat(id);
+      setActiveChat(id);
+      setLoading(false);
+      setError(null);
+      return id;
+    } catch (err) {
+      setLoading(false);
+      setError(
+        err?.response?.data?.message || err?.message || "Unable to load history"
+      );
+      return null;
+    }
   };
 
-  const newChat = {
-    title: "New Chat",
-    messages: [greeting]
-  };
-
-  const newHistory = [...history, newChat];
-  setHistory(newHistory);
-  localStorage.setItem("history", JSON.stringify(newHistory));
-
-  const newIndex = newHistory.length - 1;
-
-  setActiveChat(newIndex);
-  setMessages([greeting]);
-};
-
-
-  const loadChat = (index) => {
-    setActiveChat(index);
-    setMessages(history[index].messages);
+  const loadChat = async (id) => {
+    setActiveChat(id);
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await http.get(`/log/${id}`);
+      const data = res.data.data;
+      setMessages(data);
+      setLoading(false);
+      setError(null);
+    } catch (err) {
+      setLoading(false);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Unable to load messages"
+      );
+    }
   };
 
   const onRenameChat = (index, newName) => {
-    const updated = [...history];
-    updated[index].title = newName;
-    setHistory(updated);
-    localStorage.setItem("history", JSON.stringify(updated));
+    // const updated = [...history];
+    // updated[index].title = newName;
+    // setHistory(updated);
+    // localStorage.setItem("history", JSON.stringify(updated));
   };
 
-  const onDeleteChat = (index) => {
-    const updated = history.filter((_, i) => i !== index);
-    setHistory(updated);
-    localStorage.setItem("history", JSON.stringify(updated));
+  const onDeleteChat = async (id) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await http.delete(`/history/${id}`);
+      loadHistory();
+      setLoading(false);
+      setError(null);
+    } catch (err) {
+      setLoading(false);
+      setError(
+        err?.response?.data?.message || err?.message || "Unable to delete chat"
+      );
+    }
 
-    if (activeChat === index) {
+    if (activeChat === id) {
       setMessages([]);
       setActiveChat(null);
     }
   };
 
-  const saveChatToHistory = (title, msgs) => {
-    if (activeChat === null) return;
+  const saveChatToHistory = (id, title) => {
+    if (!id) return;
+
+    const index = history.findIndex((item) => item.id === id);
+    console.log(index);
+    if (index === -1) return; // không tìm thấy thì thoát
+
     const updated = [...history];
-    updated[activeChat] = {
+    updated[index] = {
+      ...updated[index],
       title,
-      messages: msgs
     };
+
     setHistory(updated);
-    localStorage.setItem("history", JSON.stringify(updated));
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
+  const logout = async () => {
+    try {
+      // Gửi yêu cầu đến server để vô hiệu hóa token
+      const response = await http.post("/user/logout");
+
+      if (response.status === 200) {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      } else {
+        console.error("Lỗi khi logout từ server:", response);
+      }
+    } catch (err) {
+      console.error(
+        "Có lỗi khi gửi yêu cầu logout:",
+        err?.response?.data?.message || err?.message || "Đăng nhập thất bại!"
+      );
+    }
   };
 
   return (
@@ -128,9 +202,11 @@ const createNewChat = () => {
       />
 
       <div className="chat-area">
-          <div className="top-right-header">
-    <button className="logout-btn" onClick={logout}>Logout</button>
-  </div>
+        <div className="top-right-header">
+          <button className="logout-btn" onClick={logout}>
+            Logout
+          </button>
+        </div>
         <div className="chat-wrapper">
           <div className="app-title-row">
             <h1 className="app-title">English Speaking Practice</h1>
@@ -141,6 +217,7 @@ const createNewChat = () => {
             setMessages={setMessages}
             saveChat={saveChatToHistory}
             activeChat={activeChat}
+            createNewChat={createNewChat}
           />
         </div>
       </div>

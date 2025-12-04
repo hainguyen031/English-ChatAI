@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { http } from "../lib/http";
 
 // Lay doi tuong SpeechRecognition
 const getSpeechRecognition = () => {
@@ -11,9 +12,11 @@ export default function ChatUI({
   setMessages,
   saveChat,
   activeChat,
+  createNewChat,
 }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [isListening, setIsListening] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(true);
@@ -30,15 +33,15 @@ export default function ChatUI({
   useEffect(() => {
     if (!activeChat || messages.length === 0) return;
 
-    const firstUserMsg = messages.find((m) => m.role === "user");
+    const firstUserMsg = messages.find((m) => m.item_role === "user");
     if (!firstUserMsg) return;
 
     const title =
-      firstUserMsg.text.length > 25
-        ? firstUserMsg.text.slice(0, 25) + "..."
-        : firstUserMsg.text;
+      firstUserMsg.sentences.length > 25
+        ? firstUserMsg.sentences.slice(0, 25) + "..."
+        : firstUserMsg.sentences;
 
-    saveChat(title, messages);
+    saveChat(activeChat, title);
   }, [messages]);
 
   // TTS
@@ -60,35 +63,48 @@ export default function ChatUI({
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
+    // if (!activeChat) return;
 
-    const nextMessages = [...messages, { role: "user", text }];
-    setMessages(nextMessages);
+    let chatId = activeChat;
+    if (!chatId) {
+      chatId = await createNewChat();
+    }
+
+    // if (messages.length === 0) {
+    //   //cập nhật lại title
+    //   saveChat(chatId, text);
+    // }
+
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { item_role: "user", sentences: text },
+    ]);
+
     setInput("");
     setLoading(true);
-
     try {
-      const res = await fetch("http://localhost:4000/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          history: nextMessages,
-        }),
+      const res = await http.post("/log", {
+        history_id: chatId,
+        sentences: text,
+        item_role: "user",
       });
 
-      const data = await res.json();
+      const data = res.data.data;
 
-      const reply = {
-        role: "assistant",
-        text: data.reply || "I could not understand.",
-      };
-
-      setMessages((prev) => [...prev, reply]);
+      const reply = data.ai.reply;
+      const suggestions = data.ai.suggestions;
+      // loadChat(activeChat);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { item_role: "assistant", sentences: reply },
+      ]);
       speak(reply.text);
-    } catch (err) {
-      console.error("Chat error:", err);
-    } finally {
       setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      setError(
+        err?.response?.data?.message || err?.message || "Unable to create chat"
+      );
     }
   };
 
@@ -179,10 +195,10 @@ export default function ChatUI({
           <div
             key={i}
             className={`message-row ${
-              m.role === "user" ? "message-user" : "message-assistant"
+              m.item_role === "user" ? "message-user" : "message-assistant"
             }`}
           >
-            <div className="message-bubble">{m.text}</div>
+            <div className="message-bubble">{m.sentences}</div>
           </div>
         ))}
         <div ref={bottomRef} />

@@ -6,7 +6,7 @@ import {
   FaHistory,
   FaCog,
   FaBook,
-  FaTrash
+  FaTrash,
 } from "react-icons/fa";
 import "../assets/css/sidebar.css";
 
@@ -20,7 +20,7 @@ export default function Sidebar({
   onDeleteChat,
   activeChat,
   theme,
-  toggleTheme
+  toggleTheme,
 }) {
   const [renameIndex, setRenameIndex] = useState(null);
   const [renameValue, setRenameValue] = useState("");
@@ -62,28 +62,26 @@ export default function Sidebar({
             <div
               key={index}
               className={`history-item ${
-                activeChat === index ? "active" : ""
+                activeChat === item.id ? "active" : ""
               }`}
-              onClick={() => onSelectChat(index)}
+              onClick={() => onSelectChat(item.id)}
             >
               <FaHistory size={14} />
 
-              {renameIndex === index ? (
+              {renameIndex === item.id ? (
                 <input
                   autoFocus
                   className="rename-input"
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={() => finishRename(index)}
-                  onKeyDown={(e) => e.key === "Enter" && finishRename(index)}
+                  onBlur={() => finishRename(item.id)}
+                  onKeyDown={(e) => e.key === "Enter" && finishRename(item.id)}
                 />
               ) : (
                 !collapsed && (
                   <span
                     className="title-text"
-                    onDoubleClick={(e) =>
-                      startRename(e, index, item.title)
-                    }
+                    onDoubleClick={(e) => startRename(e, item.id, item.title)}
                   >
                     {item.title}
                   </span>
@@ -95,7 +93,7 @@ export default function Sidebar({
                   className="delete-btn"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDeleteChat(index);
+                    onDeleteChat(item.id);
                   }}
                 />
               )}
