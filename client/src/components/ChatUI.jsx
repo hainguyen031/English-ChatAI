@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { http } from "../lib/http";
+import {
+  generateConversation,
+  textToSpeech,
+  speechToText,
+} from "../api/openaiAPI";
 
-// Lay doi tuong SpeechRecognition
+// Lấy đối tượng SpeechRecognition từ trình duyệt
 const getSpeechRecognition = () => {
   if (typeof window === "undefined") return null;
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -16,117 +21,44 @@ export default function ChatUI({
 }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [typing, setTyping] = useState(false);
   const [error, setError] = useState("");
 
   const [isListening, setIsListening] = useState(false);
-  const [autoSpeak, setAutoSpeak] = useState(true);
 
   const bottomRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Scroll xuong khi co tin nhan moi
+  // Scroll xuống mỗi khi có tin nhắn
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, typing]);
 
-  // Luu lich su va title
+  // Lưu title vào lịch sử
   useEffect(() => {
     if (!activeChat || messages.length === 0) return;
 
-    const firstUserMsg = messages.find((m) => m.item_role === "user");
-    if (!firstUserMsg) return;
+    const first = messages.find((m) => m.item_role === "user");
+    if (!first) return;
 
     const title =
-      firstUserMsg.sentences.length > 25
-        ? firstUserMsg.sentences.slice(0, 25) + "..."
-        : firstUserMsg.sentences;
+      first.sentences.length > 25
+        ? first.sentences.slice(0, 25) + "..."
+        : first.sentences;
 
     saveChat(activeChat, title);
   }, [messages]);
 
-  // TTS
-  const speak = (text) => {
-    if (!autoSpeak) return;
-    if (!window.speechSynthesis) return;
-
-    window.speechSynthesis.cancel();
-
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "en-US";
-    utter.rate = 1;
-    utter.pitch = 1;
-
-    window.speechSynthesis.speak(utter);
-  };
-
-  // Gui tin nhan
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text) return;
-    // if (!activeChat) return;
-
-    let chatId = activeChat;
-    if (!chatId) {
-      chatId = await createNewChat();
-    }
-
-    // if (messages.length === 0) {
-    //   //cập nhật lại title
-    //   saveChat(chatId, text);
-    // }
-
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { item_role: "user", sentences: text },
-    ]);
-
-    setInput("");
-    setLoading(true);
-    try {
-      const res = await http.post("/log", {
-        history_id: chatId,
-        sentences: text,
-        item_role: "user",
-      });
-
-      const data = res.data.data;
-
-      const reply = data.ai.reply;
-      const suggestions = data.ai.suggestions;
-      // loadChat(activeChat);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { item_role: "assistant", sentences: reply },
-      ]);
-      speak(reply.text);
-      setLoading(false);
-    } catch (err) {
-      setLoading(false);
-      setError(
-        err?.response?.data?.message || err?.message || "Unable to create chat"
-      );
-    }
-  };
-
-  // Enter de gui
-  const onKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  // =============================
-  // 🎤 STT FIX KHONG LAP LAI
-  // =============================
+  // ===========================
+  // 🎤 Speech-to-Text (STT)
+  // ===========================
   const startListening = () => {
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
-      alert("Trinh duyet khong ho tro Speech Recognition.");
+      alert("Trình duyệt của bạn không hỗ trợ Speech Recognition.");
       return;
     }
 
-    // Neu dang nghe thi stop
     if (isListening && recognitionRef.current) {
       recognitionRef.current.stop();
       return;
@@ -143,21 +75,16 @@ export default function ChatUI({
 
     let finalText = "";
 
-    recognition.onresult = (event) => {
-      let interim = "";
-
-      const last = event.results.length - 1;
-      const result = event.results[last];
+    recognition.onresult = async (event) => {
+      const result = event.results[event.results.length - 1];
       const transcript = result[0].transcript;
 
       if (result.isFinal) {
-        finalText = transcript; // ❗ chi lay FINAL moi nhat
+        finalText = transcript;
+        setInput(transcript);
       } else {
-        interim = transcript;
+        setInput(transcript);
       }
-
-      // cap nhat realtime
-      setInput((finalText + " " + interim).trim());
     };
 
     recognition.onerror = (e) => {
@@ -167,27 +94,109 @@ export default function ChatUI({
 
     recognition.onend = () => {
       setIsListening(false);
-      recognitionRef.current = null;
 
-      // Tu dong gui khi user noi xong
       if (finalText.trim()) {
         setInput(finalText.trim());
-        setTimeout(() => handleSend(), 300);
+        setTimeout(() => handleSend(), 200);
       }
     };
   };
 
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      recognitionRef.current?.stop();
-      window.speechSynthesis?.cancel();
-    };
-  }, []);
+  // ===========================
+  // 🔊 Text-to-Speech (AI Voice)
+  // ===========================
+  const playTTS = async (text) => {
+    try {
+      const audioBlob = await textToSpeech(text);
 
-  // =============================
-  // UI Component
-  // =============================
+      if (!audioBlob) {
+        // fallback using browser TTS
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = "en-US";
+        utter.rate = 1;
+        window.speechSynthesis.speak(utter);
+        return;
+      }
+
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.play();
+    } catch (e) {
+      console.log("TTS fallback:", e);
+    }
+  };
+
+  // ===========================
+  // ✉️ Gửi tin nhắn
+  // ===========================
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text) return;
+
+    let chatId = activeChat;
+
+    if (!chatId) {
+      chatId = await createNewChat();
+    }
+
+    setMessages((prev) => [...prev, { item_role: "user", sentences: text }]);
+
+    setInput("");
+    setError("");
+    setTyping(true);
+    setLoading(true);
+
+    try {
+      // 1️⃣ FE → gọi OpenAI
+      const result = await generateConversation(text);
+
+      const reply = result.answer;
+      const suggestions = result.suggestions;
+console.log("TOKEN SENT:", localStorage.getItem("token"));
+
+      // 2️⃣ Lưu user → DB
+      // await http.post("/log", {
+      //   history_id: chatId,
+      //   sentences: text,
+      //   item_role: "user",
+      // });
+
+      // 3️⃣ Lưu assistant → DB
+      // await http.post("/log", {
+      //   history_id: chatId,
+      //   sentences: reply,
+      //   item_role: "assistant",
+      // });
+
+      // 4️⃣ Hiển thị AI
+      setMessages((prev) => [
+        ...prev,
+        {
+          item_role: "assistant",
+          sentences: reply,
+          suggestions,
+        },
+      ]);
+
+      // 5️⃣ Đọc giọng
+      playTTS(reply);
+    } catch (err) {
+      console.error(err);
+      setError("Lỗi khi gửi tin nhắn.");
+    }
+
+    setTyping(false);
+    setLoading(false);
+  };
+
+  // Enter để gửi
+  const onKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="chat-container">
       <div className="chat-messages">
@@ -198,9 +207,37 @@ export default function ChatUI({
               m.item_role === "user" ? "message-user" : "message-assistant"
             }`}
           >
-            <div className="message-bubble">{m.sentences}</div>
+            <div className="message-bubble">
+              {m.sentences}
+
+              {/* suggestions */}
+              {m.suggestions && m.suggestions.length > 0 && (
+                <div className="suggestions-box">
+                  {m.suggestions.map((s, idx) => (
+                    <button
+                      key={idx}
+                      className="suggestion-btn"
+                      onClick={() => setInput(s)}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ))}
+
+        {typing && (
+          <div className="message-row message-assistant">
+            <div className="typing-bubble">
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+            </div>
+          </div>
+        )}
+
         <div ref={bottomRef} />
       </div>
 
@@ -226,9 +263,7 @@ export default function ChatUI({
         </button>
       </div>
 
-      <button className="tts-toggle" onClick={() => setAutoSpeak((p) => !p)}>
-        {autoSpeak ? "🔊 Auto Speak ON" : "🔇 Auto Speak OFF"}
-      </button>
+      {error && <p className="error-text">{error}</p>}
     </div>
   );
 }

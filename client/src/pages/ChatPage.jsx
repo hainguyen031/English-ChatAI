@@ -11,152 +11,89 @@ export default function ChatPage() {
   const [activeChat, setActiveChat] = useState(null);
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    console.log(activeChat);
-    if (activeChat) {
-      loadChat(activeChat);
-    }
-  }, [activeChat]);
-
-  async function loadHistory() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await http.get(`/history`);
-      const data = res.data.data;
-      setHistory(data);
-      setLoading(false);
-      setError(null);
-    } catch (err) {
-      setLoading(false);
-      setError(
-        err?.response?.data?.message || err?.message || "Unable to load history"
-      );
-    }
-  }
-
+  // ============================================
+  // Load history tại lần đầu mở trang
+  // ============================================
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) setTheme(savedTheme);
 
-    loadHistory();
-
     const savedCollapsed = localStorage.getItem("collapsed");
     if (savedCollapsed === "true") setCollapsed(true);
+
+    loadHistory();
   }, []);
 
+  // apply theme
   useEffect(() => {
     document.documentElement.className = theme;
   }, [theme]);
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 900) {
-        setCollapsed(true);
-      } else {
-        const saved = localStorage.getItem("collapsed");
-        setCollapsed(saved === "true");
-      }
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-  };
-
-  const toggleSidebar = () => {
-    setCollapsed((prev) => {
-      localStorage.setItem("collapsed", !prev);
-      return !prev;
-    });
-  };
-
-  const createNewChat = async () => {
-    // const greeting = {
-    //   role: "assistant",
-    //   text: "Hello! How can I help you practice English today?",
-    // };
+  // ============================================
+  // Load lịch sử chat
+  // ============================================
+  const loadHistory = async () => {
     setLoading(true);
-    setError(null);
     try {
-      const res = await http.post(`/history`);
-      const id = res.data.data.id;
-      loadHistory();
-      loadChat(id);
-      setActiveChat(id);
+      const res = await http.get("/history");
+      setHistory(res.data.data);
       setLoading(false);
-      setError(null);
+    } catch (err) {
+      setLoading(false);
+      setError(err?.response?.data?.message || "Unable to load history");
+    }
+  };
+
+  // ============================================
+  // Load chat message theo history id
+  // ============================================
+  const loadChat = async (id) => {
+    setActiveChat(id);
+    setLoading(true);
+    setMessages([]);
+
+    try {
+      const res = await http.get(`/log/${id}`);
+      setMessages(res.data.data);
+      setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      setError(err?.response?.data?.message || "Unable to load messages");
+    }
+  };
+
+  // ============================================
+  // Tạo chat mới → backend tạo history và trả ID
+  // ============================================
+  const createNewChat = async () => {
+    setLoading(true);
+    try {
+      const res = await http.post("/history");
+      const id = res.data.data.id;
+
+      await loadHistory(); // refresh sidebar
+      setActiveChat(id);
+      setMessages([]);
+
+      setLoading(false);
       return id;
     } catch (err) {
       setLoading(false);
-      setError(
-        err?.response?.data?.message || err?.message || "Unable to load history"
-      );
+      setError(err?.response?.data?.message || "Unable to create chat");
       return null;
     }
   };
 
-  const loadChat = async (id) => {
-    setActiveChat(id);
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await http.get(`/log/${id}`);
-      const data = res.data.data;
-      setMessages(data);
-      setLoading(false);
-      setError(null);
-    } catch (err) {
-      setLoading(false);
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Unable to load messages"
-      );
-    }
-  };
-
-  const onRenameChat = (index, newName) => {
-    // const updated = [...history];
-    // updated[index].title = newName;
-    // setHistory(updated);
-    // localStorage.setItem("history", JSON.stringify(updated));
-  };
-
-  const onDeleteChat = async (id) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await http.delete(`/history/${id}`);
-      loadHistory();
-      setLoading(false);
-      setError(null);
-    } catch (err) {
-      setLoading(false);
-      setError(
-        err?.response?.data?.message || err?.message || "Unable to delete chat"
-      );
-    }
-
-    if (activeChat === id) {
-      setMessages([]);
-      setActiveChat(null);
-    }
-  };
-
-  const saveChatToHistory = (id, title) => {
+  // ============================================
+  // Lưu Title của chat vào DB
+  // ============================================
+  const saveChatToHistory = async (id, title) => {
     if (!id) return;
 
     const index = history.findIndex((item) => item.id === id);
-    console.log(index);
-    if (index === -1) return; // không tìm thấy thì thoát
+    if (index === -1) return;
 
     const updated = [...history];
     updated[index] = {
@@ -167,25 +104,74 @@ export default function ChatPage() {
     setHistory(updated);
   };
 
-  const logout = async () => {
+  // ============================================
+  // Xóa chat
+  // ============================================
+  const onDeleteChat = async (id) => {
     try {
-      // Gửi yêu cầu đến server để vô hiệu hóa token
-      const response = await http.post("/user/logout");
+      await http.delete(`/history/${id}`);
+      loadHistory();
 
-      if (response.status === 200) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      } else {
-        console.error("Lỗi khi logout từ server:", response);
+      if (activeChat === id) {
+        setActiveChat(null);
+        setMessages([]);
       }
     } catch (err) {
-      console.error(
-        "Có lỗi khi gửi yêu cầu logout:",
-        err?.response?.data?.message || err?.message || "Đăng nhập thất bại!"
-      );
+      setError("Unable to delete chat");
     }
   };
 
+  // ============================================
+  // Sidebar toggle
+  // ============================================
+  const toggleSidebar = () => {
+    setCollapsed((prev) => {
+      localStorage.setItem("collapsed", !prev);
+      return !prev;
+    });
+  };
+
+  // Auto collapse khi < 900px
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 900) {
+        setCollapsed(true);
+      } else {
+        const saved = localStorage.getItem("collapsed");
+        setCollapsed(saved === "true");
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // ============================================
+  // Light/Dark Mode
+  // ============================================
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("theme", next);
+  };
+
+  // ============================================
+  // Logout
+  // ============================================
+  const logout = async () => {
+    try {
+      await http.post("/user/logout");
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  // ============================================
+  // RENDER
+  // ============================================
   return (
     <div className="app-layout">
       <Sidebar
@@ -194,7 +180,6 @@ export default function ChatPage() {
         history={history}
         onNewChat={createNewChat}
         onSelectChat={loadChat}
-        onRenameChat={onRenameChat}
         onDeleteChat={onDeleteChat}
         activeChat={activeChat}
         theme={theme}
@@ -207,6 +192,7 @@ export default function ChatPage() {
             Logout
           </button>
         </div>
+
         <div className="chat-wrapper">
           <div className="app-title-row">
             <h1 className="app-title">English Speaking Practice</h1>
