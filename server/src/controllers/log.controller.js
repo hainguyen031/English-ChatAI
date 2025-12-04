@@ -1,4 +1,5 @@
 const Log = require("../models/log.model");
+const History = require("../models/history.model");
 const ApiResponse = require("../utils/apiResponse");
 const ApiError = require("../utils/apiError");
 // const OpenAI = require("openai");
@@ -28,6 +29,12 @@ controller.create = async (req, res) => {
 
   // Lấy toàn bộ log trước đó
   const logs = await Log.findByHistory(history_id);
+  // Nếu đây là tin nhắn đầu tiên, dùng câu đầu tiên làm title cho history
+  console.log(logs.length);
+  if (logs.length === 1 && item_role === "user") {
+    const firstSentence = sentences.split(/[.?!]/)[0].trim();
+    await History.updateTitle(history_id, firstSentence || "New Chat");
+  }
 
   // 1. System role - hướng dẫn AI
   const recentLogs = logs.slice(-20);
@@ -36,11 +43,7 @@ controller.create = async (req, res) => {
     content: log.sentences,
   }));
 
-  const prompt = `Based on the context I provide, Answer the question below and then return 3 follow-up 
-  question suggestions to continue the conversation.\nFormat your response as a JSON object with two 
-  fields: \"answer\" and \"suggestions\".\n\nExample:\n{\n  \"answer\": \"Sure, here is the 
-  explanation...\",\n  \"suggestions\": [\"Can you give me an example?\", \"How does this apply in real 
-  life?\", \"What are the benefits?\"]\n}\n\nQuestion: ${sentences}`;
+  const prompt = `Based on the context I provide, Answer the question below and then return 3 follow-up question suggestions to continue the conversation.\nFormat your response as a JSON object with two fields: \"answer\" and \"suggestions\".\n\nExample:\n{\n  \"answer\": \"Sure, here is the explanation...\",\n  \"suggestions\": [\"Can you give me an example?\", \"How does this apply in real life?\", \"What are the benefits?\"]\n}\n\nQuestion: ${sentences}`;
 
   // Prompt gửi cho AI
 
