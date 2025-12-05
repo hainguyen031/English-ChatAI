@@ -14,6 +14,7 @@ export default function ModalSettings({ show, onHide }) {
   const saveSettings = () => {
     localStorage.setItem("autoSpeak", autoSpeak);
     localStorage.setItem("autoMode", autoMode);
+    window.dispatchEvent(new Event("settings-updated"));
     onHide();
   };
 

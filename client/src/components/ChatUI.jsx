@@ -21,7 +21,12 @@ export default function ChatUI({
   const [error, setError] = useState("");
 
   const [isListening, setIsListening] = useState(false);
-  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [autoSpeak, setAutoSpeak] = useState(
+    localStorage.getItem("autoSpeak") === "true"
+  );
+  const [autoMode, setAutoMode] = useState(
+    localStorage.getItem("autoMode") === "true"
+  );
 
   const [selectedWord, setSelectedWord] = useState("");
   const [showDict, setShowDict] = useState(false);
@@ -36,6 +41,17 @@ export default function ChatUI({
     setSelectedWord(clean);
     setShowDict(true);
   };
+
+  //  Khi settings thay doi
+  useEffect(() => {
+    const reloadSettings = () => {
+      setAutoSpeak(localStorage.getItem("autoSpeak") === "true");
+      setAutoMode(localStorage.getItem("autoMode") === "true");
+    };
+
+    window.addEventListener("settings-updated", reloadSettings);
+    return () => window.removeEventListener("settings-updated", reloadSettings);
+  }, []);
 
   // Scroll xuong khi co tin nhan moi
   useEffect(() => {
@@ -108,6 +124,7 @@ export default function ChatUI({
 
   // TTS
   const playTTS = async (text) => {
+    if (!autoSpeak) return; //tắt autoSpeak
     try {
       const response = await http.post(
         "/log/tts",
