@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 import { http } from "../lib/http";
+import { toast } from "react-toastify";
 
 export default function ModalVocabulary({ show, onHide }) {
   const [words, setWords] = useState([]);
@@ -10,29 +11,42 @@ export default function ModalVocabulary({ show, onHide }) {
     if (show) loadWords();
   }, [show]);
 
+  // Load danh sách vocab
   const loadWords = async () => {
     try {
       const res = await http.get("/saved-words");
       setWords(res.data.data);
     } catch (err) {
       console.error("Failed to load vocabulary:", err);
+      toast.error("Failed to load vocabulary!");
     }
   };
 
-  // ============================
-  // 🔊 Speech (FE TTS)
-  // ============================
+  // 🔊 TTS FE
   const speakWord = (word) => {
-    if (!window.speechSynthesis) return alert("Browser không hỗ trợ TTS");
+    if (!window.speechSynthesis) return toast.error("Browser không hỗ trợ TTS");
 
     window.speechSynthesis.cancel();
 
     const utter = new SpeechSynthesisUtterance(word);
     utter.lang = "en-US";
     utter.rate = 0.9;
-    utter.pitch = 1;
 
     window.speechSynthesis.speak(utter);
+  };
+
+  // ❌ XÓA TỪ
+  const deleteWord = async (id) => {
+    try {
+      await http.delete(`/saved-words/${id}`);
+      toast.success("Deleted!");
+
+      // load lại danh sách sau khi xóa
+      loadWords();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete word");
+    }
   };
 
   return (
@@ -52,13 +66,21 @@ export default function ModalVocabulary({ show, onHide }) {
                   <div className="d-flex justify-content-between align-items-center">
                     <h5 className="fw-bold m-0">{w.word}</h5>
 
-                    {/* 🔊 PLAY BUTTON */}
-                    <button
-                      className="btn btn-sm btn-outline-light"
-                      onClick={() => speakWord(w.word)}
-                    >
-                      🔊
-                    </button>
+                    <div className="d-flex gap-2">
+                      <button
+                        className="btn btn-sm btn-outline-light"
+                        onClick={() => speakWord(w.word)}
+                      >
+                        🔊
+                      </button>
+
+                      <button
+                        className="btn btn-sm"
+                        onClick={() => deleteWord(w.id)}
+                      >
+                        ❌
+                      </button>
+                    </div>
                   </div>
 
                   <p className="opacity-75 mt-2">{w.meaning}</p>
