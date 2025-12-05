@@ -22,6 +22,7 @@ export default function Sidebar({
   theme,
   toggleTheme,
   openVocab,
+  setShowSettings,
 }) {
   const [renameIndex, setRenameIndex] = useState(null);
   const [renameValue, setRenameValue] = useState("");
@@ -116,7 +117,7 @@ export default function Sidebar({
           )}
         </button>
 
-        <button className="sidebar-item small">
+        <button className="sidebar-item" onClick={() => setShowSettings(true)}>
           <FaCog />
           {!collapsed && <span>Settings</span>}
         </button>

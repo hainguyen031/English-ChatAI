@@ -186,6 +186,9 @@ export default function ChatUI({
     };
   }, []);
 
+  const lastAssistantMsg = messages.filter((m) => m.suggestions)?.slice(-1)[0];
+  const lastSuggestions = lastAssistantMsg?.suggestions || [];
+
   return (
     <div className="chat-container">
       <div className="chat-messages">
@@ -207,21 +210,6 @@ export default function ChatUI({
                   {w + " "}
                 </span>
               ))}
-
-              {/* suggestions */}
-              {m.suggestions && m.suggestions.length > 0 && (
-                <div className="suggestions-box">
-                  {m.suggestions.map((s, idx) => (
-                    <button
-                      key={idx}
-                      className="suggestion-btn"
-                      onClick={() => setInput(s)}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         ))}
@@ -229,21 +217,35 @@ export default function ChatUI({
         {typing && (
           <div className="message-row message-assistant">
             <div className="typing-bubble">
-              <span className="dot"></span>
-              <span className="dot"></span>
-              <span className="dot"></span>
+              <span className="typing-dot"></span>
+              <span className="typing-dot"></span>
+              <span className="typing-dot"></span>
             </div>
           </div>
         )}
 
         <div ref={bottomRef} />
-        
+
         <DictionaryModal
           show={showDict}
           onHide={() => setShowDict(false)}
           word={selectedWord}
         />
       </div>
+
+      {lastSuggestions.length > 0 && (
+        <div className="suggestions-bar">
+          {lastSuggestions.map((s, i) => (
+            <button
+              key={i}
+              className="suggestion-pill"
+              onClick={() => setInput(s)}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="chat-input-row">
         <button

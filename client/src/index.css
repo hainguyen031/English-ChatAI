@@ -62,7 +62,7 @@ body {
 
 .app-layout {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
   background: var(--bg);
 }
@@ -79,7 +79,7 @@ body {
 .chat-wrapper {
   width: 100%;
   max-width: 800px;
-  height: 90vh;
+  min-height: 90vh;
   background: var(--chat-bg);
   border-radius: 16px;
   border: 1px solid var(--border);
@@ -132,7 +132,7 @@ body {
   border-radius: 12px;
   line-height: 1.4;
   font-size: 14px;
-  color: var(--text);
+  color: var(--text) !important;
 }
 
 .message-user .message-bubble {
@@ -147,6 +147,8 @@ body {
 /* Input + Buttons */
 .chat-input-row {
   display: flex;
+  position: sticky;
+  bottom:  0;
   margin-top: 8px;
   gap: 8px;
 }
@@ -227,29 +229,36 @@ body {
 }
 
 /* Suggestions */
-.suggestions {
-  margin-top: 8px;
-}
-
-.suggestions-label {
-  font-size: 13px;
-  color: var(--text-light);
-}
-
-.suggestions-list {
+.suggestions-bar {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0 5px;
+  overflow-x: auto;
+  white-space: nowrap;
+
+  /* nền cố định như input */
+  background: var(--chat-bg);
+  border-top: 1px solid var(--border);
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
+/* Suggestion pill */
 .suggestion-pill {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: 999px;
   background: var(--suggestion-bg);
   border: 1px solid var(--suggestion-border);
   color: var(--text);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: 0.2s;
+}
+
+.suggestion-pill:hover {
+  background: var(--button-hover);
 }
 
 .sidebar.collapsed~.chat-area {
@@ -258,8 +267,6 @@ body {
 
 @media (max-width: 600px) {
 
-  /* Kiểu ChatGPT mobile:
-     Sidebar hoàn toàn ẩn, chỉ hiện khi bấm */
   .sidebar {
     transform: translateX(-100%);
     position: fixed;

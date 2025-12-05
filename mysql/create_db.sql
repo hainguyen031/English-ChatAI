@@ -41,5 +41,5 @@ CREATE TABLE IF NOT EXISTS saved_words (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
-
+alter table historys add title VARCHAR(255) DEFAULT 'New Chat';
 drop database db_nmcnpm;

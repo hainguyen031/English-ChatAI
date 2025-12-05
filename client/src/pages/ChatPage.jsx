@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import ChatUI from "../components/ChatUI";
 import { http } from "../lib/http";
 import ModalVocabulary from "../components/ModalVocabulary";
+import ModalSettings from "../components/ModalSettings";
 
 export default function ChatPage() {
   const [history, setHistory] = useState([]);
@@ -18,6 +19,8 @@ export default function ChatPage() {
 
   const openVocab = () => setShowVocab(true);
   const closeVocab = () => setShowVocab(false);
+
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     // console.log(activeChat);
@@ -206,6 +209,7 @@ export default function ChatPage() {
         theme={theme}
         toggleTheme={toggleTheme}
         openVocab={openVocab}
+        setShowSettings={setShowSettings}
       />
       <ModalVocabulary show={showVocab} onHide={closeVocab} />
       <div className="chat-area">
@@ -229,6 +233,10 @@ export default function ChatPage() {
           />
         </div>
       </div>
+      <ModalSettings
+        show={showSettings}
+        onHide={() => setShowSettings(false)}
+      />
     </div>
   );
 }

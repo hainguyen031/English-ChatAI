@@ -18,7 +18,6 @@ export default function DictionaryModal({ show, onHide, word }) {
     setLoading(true);
     try {
       const res = await http.post("/log/translate", { text: word });
-      console.log(`translate`, res);
 
       setMeaning(res.data.data.translatedText);
     } catch (err) {
