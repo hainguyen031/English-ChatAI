@@ -1,2 +1,15 @@
-## Getting start with
-### `npm run dev`
+###  Chạy thủ công
+1. Khởi động MySQL Server và import database từ `mysql/create_db.sql`
+2. Cài đặt backend:
+    ```
+    cd server
+    npm install
+    npm run start
+    ```
+3. Cài đặt frontend:
+    ```
+    cd client
+    npm install
+    npm run dev
+    ```
+4. Truy cập ứng dụng tại [http://localhost:5173](http://localhost:5173)
