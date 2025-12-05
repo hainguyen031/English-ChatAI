@@ -1,12 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { http } from "../lib/http";
-import {
-  generateConversation,
-  textToSpeech,
-  speechToText,
-} from "../api/openaiAPI";
+import DictionaryModal from "./DictionaryModal";
 
-// Lấy đối tượng SpeechRecognition từ trình duyệt
+// Lay doi tuong SpeechRecognition
 const getSpeechRecognition = () => {
   if (typeof window === "undefined") return null;
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -25,33 +21,43 @@ export default function ChatUI({
   const [error, setError] = useState("");
 
   const [isListening, setIsListening] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(true);
+
+  const [selectedWord, setSelectedWord] = useState("");
+  const [showDict, setShowDict] = useState(false);
 
   const bottomRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Scroll xuống mỗi khi có tin nhắn
+  const openDictionary = (word) => {
+    if (!word.trim()) return;
+    const clean = word.replace(/[^a-zA-Z]/g, "");
+    if (!clean) return;
+    setSelectedWord(clean);
+    setShowDict(true);
+  };
+
+  // Scroll xuong khi co tin nhan moi
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
 
-  // Lưu title vào lịch sử
+  // Luu lich su va title
   useEffect(() => {
     if (!activeChat || messages.length === 0) return;
 
-    const first = messages.find((m) => m.item_role === "user");
-    if (!first) return;
+    const firstUserMsg = messages.find((m) => m.item_role === "user");
+    if (!firstUserMsg) return;
 
     const title =
-      first.sentences.length > 25
-        ? first.sentences.slice(0, 25) + "..."
-        : first.sentences;
+      firstUserMsg.sentences.length > 25
+        ? firstUserMsg.sentences.slice(0, 25) + "..."
+        : firstUserMsg.sentences;
 
     saveChat(activeChat, title);
   }, [messages]);
 
-  // ===========================
-  // 🎤 Speech-to-Text (STT)
-  // ===========================
+  //stt
   const startListening = () => {
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
@@ -82,8 +88,6 @@ export default function ChatUI({
       if (result.isFinal) {
         finalText = transcript;
         setInput(transcript);
-      } else {
-        setInput(transcript);
       }
     };
 
@@ -102,22 +106,16 @@ export default function ChatUI({
     };
   };
 
-  // ===========================
-  // 🔊 Text-to-Speech (AI Voice)
-  // ===========================
+  // TTS
   const playTTS = async (text) => {
     try {
-      const audioBlob = await textToSpeech(text);
+      const response = await http.post(
+        "/log/tts",
+        { text },
+        { responseType: "blob" } // BẮT BUỘC CHO TTS
+      );
 
-      if (!audioBlob) {
-        // fallback using browser TTS
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = "en-US";
-        utter.rate = 1;
-        window.speechSynthesis.speak(utter);
-        return;
-      }
-
+      const audioBlob = response.data; // Axios blob trả trong data
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       audio.play();
@@ -126,76 +124,67 @@ export default function ChatUI({
     }
   };
 
-  // ===========================
-  // ✉️ Gửi tin nhắn
-  // ===========================
+  // Gui tin nhan
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
 
     let chatId = activeChat;
-
     if (!chatId) {
       chatId = await createNewChat();
     }
 
-    setMessages((prev) => [...prev, { item_role: "user", sentences: text }]);
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { item_role: "user", sentences: text },
+    ]);
 
     setInput("");
     setError("");
     setTyping(true);
     setLoading(true);
-
     try {
-      // 1️⃣ FE → gọi OpenAI
-      const result = await generateConversation(text);
+      const res = await http.post("/log", {
+        history_id: chatId,
+        sentences: text,
+        item_role: "user",
+      });
 
-      const reply = result.answer;
-      const suggestions = result.suggestions;
-console.log("TOKEN SENT:", localStorage.getItem("token"));
-
-      // 2️⃣ Lưu user → DB
-      // await http.post("/log", {
-      //   history_id: chatId,
-      //   sentences: text,
-      //   item_role: "user",
-      // });
-
-      // 3️⃣ Lưu assistant → DB
-      // await http.post("/log", {
-      //   history_id: chatId,
-      //   sentences: reply,
-      //   item_role: "assistant",
-      // });
-
-      // 4️⃣ Hiển thị AI
-      setMessages((prev) => [
-        ...prev,
-        {
-          item_role: "assistant",
-          sentences: reply,
-          suggestions,
-        },
+      const data = res.data.data;
+      const reply = data.ai.reply;
+      const suggestions = data.ai.suggestions;
+      // loadChat(activeChat);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { item_role: "assistant", sentences: reply, suggestions },
       ]);
-
-      // 5️⃣ Đọc giọng
       playTTS(reply);
+      setLoading(false);
     } catch (err) {
-      console.error(err);
-      setError("Lỗi khi gửi tin nhắn.");
+      setLoading(false);
+      setError(
+        err?.response?.data?.message || err?.message || "Unable to create chat"
+      );
     }
-
     setTyping(false);
     setLoading(false);
   };
 
-  // Enter để gửi
+  // Enter de gui
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
 
   return (
     <div className="chat-container">
@@ -208,7 +197,16 @@ console.log("TOKEN SENT:", localStorage.getItem("token"));
             }`}
           >
             <div className="message-bubble">
-              {m.sentences}
+              {/* hiển thị từng từ để click */}
+              {m.sentences.split(" ").map((w, idx) => (
+                <span
+                  key={idx}
+                  className="word"
+                  onClick={() => openDictionary(w)}
+                >
+                  {w + " "}
+                </span>
+              ))}
 
               {/* suggestions */}
               {m.suggestions && m.suggestions.length > 0 && (
@@ -239,6 +237,12 @@ console.log("TOKEN SENT:", localStorage.getItem("token"));
         )}
 
         <div ref={bottomRef} />
+        
+        <DictionaryModal
+          show={showDict}
+          onHide={() => setShowDict(false)}
+          word={selectedWord}
+        />
       </div>
 
       <div className="chat-input-row">

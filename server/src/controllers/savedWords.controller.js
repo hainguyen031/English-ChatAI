@@ -27,4 +27,26 @@ controller.getAll = async (req, res) => {
     .json(new ApiResponse(200, words, "Find save word list successfully"));
 };
 
+controller.delete = async (req, res) => {
+  let { id } = req.params;
+  let user_id = req.user.id;
+
+  if (!id) {
+    throw new ApiError(400, "id is required");
+  }
+  if (isNaN(id)) {
+    throw new ApiError(400, "id must be integer");
+  }
+
+  id = parseInt(id);
+
+  const deleted = await SavedWord.deleteIfOwner(id, user_id);
+
+  if (!deleted) {
+    throw new ApiError(403, "You are not allowed to delete this word");
+  }
+
+  res.status(200).json(new ApiResponse(200, null, "Word deleted successfully"));
+};
+
 module.exports = controller;

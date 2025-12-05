@@ -2,10 +2,8 @@ const Log = require("../models/log.model");
 const History = require("../models/history.model");
 const ApiResponse = require("../utils/apiResponse");
 const ApiError = require("../utils/apiError");
-// const OpenAI = require("openai");
-// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const { OpenRouter } = require("@openrouter/sdk");
-const openrouter = new OpenRouter({ apiKey: process.env.OPENROUTER_API_KEY });
+const OpenAI = require("openai");
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const controller = {};
 
 // Create log + AI reply (conversation)
@@ -48,16 +46,11 @@ controller.create = async (req, res) => {
   // Prompt gửi cho AI
 
   // Gọi OpenAI
-  // const completion = await openai.chat.completions.create({
-  //     model: "GPT-3.5",
-  //     messages: [{ role: "user", content: prompt }],
-  // });
-
-  // Gọi OpenRouter
-  const completion = await openrouter.chat.send({
-    model: "openai/gpt-3.5-turbo",
+  const completion = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
     messages: [...messages, { role: "user", content: prompt }],
-    max_tokens: 8000,
+    temperature: 0.7,
+    max_tokens: 600,
   });
 
   let content = completion.choices[0].message.content;
@@ -115,8 +108,8 @@ controller.translate = async (req, res) => {
 
   const prompt = `Translate the following English text to Vietnamese: "${text}"`;
 
-  const completion = await openrouter.chat.send({
-    model: "openai/gpt-3.5-turbo",
+  const completion = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -127,15 +120,14 @@ controller.translate = async (req, res) => {
     .json(new ApiResponse(200, { translatedText }, "Successful translation"));
 };
 
-//chưa có api
 controller.textToSpeech = async (req, res) => {
   const { text } = req.body;
   if (!text) {
     throw new ApiError(400, "Text content is required for TTS.");
   }
 
-  const speechFile = await openrouter.audio.speech.create({
-    model: "tts-1",
+  const speechFile = await openai.audio.speech.create({
+    model: "gpt-4o-mini-tts",
     voice: "alloy",
     input: text,
     response_format: "mp3",
@@ -145,7 +137,30 @@ controller.textToSpeech = async (req, res) => {
 
   res.setHeader("Content-Type", "audio/mpeg");
   res.setHeader("Content-Disposition", 'attachment; filename="speech.mp3"');
-  res.send(buffer);
+  res.send(buffer); //Blob
+};
+
+controller.speechToText = async (req, res) => {
+  const audioFile = req.file;
+  if (!audioFile) {
+    throw new ApiError(400, "Audio file is required for STT.");
+  }
+
+  const result = await openai.audio.transcriptions.create({
+    file: audioFile.buffer, // Multer buffer
+    model: "whisper-1", // match FE
+    response_format: "json",
+  });
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { text: result.text || "" },
+        "Successful translation"
+      )
+    );
 };
 
 module.exports = controller;

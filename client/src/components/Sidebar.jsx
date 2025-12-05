@@ -21,6 +21,7 @@ export default function Sidebar({
   activeChat,
   theme,
   toggleTheme,
+  openVocab,
 }) {
   const [renameIndex, setRenameIndex] = useState(null);
   const [renameValue, setRenameValue] = useState("");
@@ -103,7 +104,7 @@ export default function Sidebar({
       </div>
 
       <div className="bottom-section">
-        <button className="sidebar-item">
+        <button className="sidebar-item" onClick={() => openVocab()}>
           <FaBook />
           {!collapsed && <span>Vocabulary</span>}
         </button>

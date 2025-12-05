@@ -8,6 +8,7 @@ router.use(authenticateToken); // bảo vệ tất cả route
 router.post("/", controller.create);
 router.get("/:history_id", controller.getByHistory);
 router.post("/translate", controller.translate);
-// router.post('/text-to-speech', controller.textToSpeech);
+router.post("/tts", controller.textToSpeech);
+router.post("/stt", controller.speechToText);
 
 module.exports = router;

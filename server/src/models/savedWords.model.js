@@ -17,4 +17,12 @@ SavedWord.findByUser = async (user_id) => {
   return rows;
 };
 
+SavedWord.deleteIfOwner = async (id, user_id) => {
+  const [result] = await pool.query(
+    "DELETE FROM saved_words WHERE id = ? AND user_id = ?",
+    [id, user_id]
+  );
+  return result.affectedRows; // số row bị xóa;
+};
+
 module.exports = SavedWord;
