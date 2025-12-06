@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { http } from "../lib/http";
 import DictionaryModal from "./DictionaryModal";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Popover from "react-bootstrap/Popover";
 
 // Lay doi tuong SpeechRecognition
 const getSpeechRecognition = () => {
@@ -40,6 +42,21 @@ export default function ChatUI({
     if (!clean) return;
     setSelectedWord(clean);
     setShowDict(true);
+  };
+
+  const translateMessage = async (index) => {
+    try {
+      const text = messages[index].sentences;
+      const res = await http.post("/log/translate", { text });
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[index].translated = res.data.data.translatedText;
+        return updated;
+      });
+    } catch (err) {
+      console.error("Translate error:", err);
+    }
   };
 
   //  Khi settings thay doi
@@ -123,8 +140,8 @@ export default function ChatUI({
   };
 
   // TTS
-  const playTTS = async (text) => {
-    if (!autoSpeak) return; //tắt autoSpeak
+  const playTTS = async (text, force = false) => {
+    if (!autoSpeak && !force) return; //tắt autoSpeak
     try {
       const response = await http.post(
         "/log/tts",
@@ -228,6 +245,40 @@ export default function ChatUI({
                 </span>
               ))}
             </div>
+            {m.item_role !== "user" && (
+              <div className="reply-tools">
+                {/* 🔊 Replay */}
+                <button
+                  className="tool-btn"
+                  onClick={() => playTTS(m.sentences, true)}
+                >
+                  🔊
+                </button>
+
+                {/* 🌐 TRANSLATE WITH POPOVER */}
+                <OverlayTrigger
+                  trigger="click"
+                  placement="bottom"
+                  flip
+                  rootClose
+                  overlay={
+                    <Popover>
+                      <Popover.Header as="h3">
+                        Vietnamese Translation
+                      </Popover.Header>
+                      <Popover.Body>
+                        {m.translated ? m.translated : "Translating..."}
+                      </Popover.Body>
+                    </Popover>
+                  }
+                  onToggle={(show) => {
+                    if (show && !m.translated) translateMessage(i);
+                  }}
+                >
+                  <button className="tool-btn">🌐</button>
+                </OverlayTrigger>
+              </div>
+            )}
           </div>
         ))}
 

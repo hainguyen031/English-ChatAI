@@ -386,3 +386,24 @@ body {
 .dark-mode .suggestion-item:hover {
   background: #3a3a3a;
 }
+
+.reply-tools {
+  display: flex;
+  gap: 8px;
+  margin-left: 8px;
+  align-items: center;
+}
+
+.tool-btn {
+  font-size: 12px;
+  background: var(--bubble-assistant);
+  padding: 6px 10px;
+  border: 1px solid var(--bubble-assistant);
+  border-radius: 6px;
+  cursor: pointer;
+  height: fit-content;
+}
+
+.tool-btn:hover {
+  background: #3b3b3b;
+}
